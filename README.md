@@ -8,14 +8,29 @@ This repository contains an end-to-end distributed event streaming system built 
 
 ```mermaid
 flowchart LR
-    A["transaction-producer<br/>(Spring Boot 3.3 / Java 21)"] -->|"JSON Transaction<br/>(key: accountId)"| T1[("transactions<br/>(3 Partitions)")]
-    T1 --> B["fraud-detector<br/>(Rust / rdkafka)"]
-    B -->|"Amount > $3,000<br/>FraudDetectedEvent"| T2[("fraud-detected-transactions<br/>(3 Partitions)")]
-    T2 --> C["fraud-alert-streams<br/>(Kafka Streams / Spring Boot)"]
-    C -->|"Enriched AlertEvent<br/>(Topology Stream)"| T3[("alerts<br/>(3 Partitions)")]
-    T3 --> D["notification-service<br/>(Rust / rdkafka)"]
-    D -->|"Multi-channel Dispatch<br/>(SMS, Push, Email)"| T4[("notifications<br/>(3 Partitions)")]
+    subgraph Cluster["Kafka Cluster"]
+        subgraph Broker["Kafka Broker (KRaft Node 1)"]
+            T1[("Topic: transactions<br/>(3 Partitions)")]
+            T2[("Topic: fraud-detected-transactions<br/>(3 Partitions)")]
+            T3[("Topic: alerts<br/>(3 Partitions)")]
+            T4[("Topic: notifications<br/>(3 Partitions)")]
+        end
+    end
+
+    P1["1. transaction-producer<br/>(Spring Boot 3.3 / Java 21)"]
+    P2["2. fraud-detector<br/>(Rust / rdkafka)"]
+    P3["3. fraud-alert-streams<br/>(Spring Boot / Kafka Streams)"]
+    P4["4. notification-service<br/>(Rust / rdkafka)"]
+
+    P1 -->|"Produce 1,000 tx<br/>key: accountId"| T1
+    T1 -->|"Consume tx"| P2
+    P2 -->|"Amount > 3,000<br/>FraudDetectedEvent"| T2
+    T2 -->|"Topology stream<br/>process & enrich"| P3
+    P3 -->|"Enriched AlertEvent"| T3
+    T3 -->|"Consume alerts"| P4
+    P4 -->|"Multi-channel dispatch<br/>record event"| T4
 ```
+
 
 ---
 

@@ -13,10 +13,10 @@ flowchart LR
     subgraph Cluster["Kafka Cluster"]
         subgraph Broker["Kafka Broker (KRaft Node 1)"]
             direction TB
-            T1[("Topic: transactions<br/>(3 Partitions)")]
-            T2[("Topic: fraud-detected-transactions<br/>(3 Partitions)")]
-            T3[("Topic: alerts<br/>(3 Partitions)")]
-            T4[("Topic: notifications<br/>(3 Partitions)")]
+            T1["Topic: transactions<br/>[ Partition 0 ] &nbsp;|&nbsp; [ Partition 1 ] &nbsp;|&nbsp; [ Partition 2 ]"]
+            T2["Topic: fraud-detected-transactions<br/>[ Partition 0 ] &nbsp;|&nbsp; [ Partition 1 ] &nbsp;|&nbsp; [ Partition 2 ]"]
+            T3["Topic: alerts<br/>[ Partition 0 ] &nbsp;|&nbsp; [ Partition 1 ] &nbsp;|&nbsp; [ Partition 2 ]"]
+            T4["Topic: notifications<br/>[ Partition 0 ] &nbsp;|&nbsp; [ Partition 1 ] &nbsp;|&nbsp; [ Partition 2 ]"]
             T1 ~~~ T2 ~~~ T3 ~~~ T4
         end
     end

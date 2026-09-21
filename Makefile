@@ -1,0 +1,43 @@
+.PHONY: all up down init-topics build run-producer run-fraud run-streams run-notif test-1000 clean
+
+SDK_INIT = bash -c 'source "$$HOME/.sdkman/bin/sdkman-init.sh" 2>/dev/null;
+
+all: build
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+init-topics:
+	./scripts/init-topics.sh
+
+build:
+	@echo "==> Building Spring Boot apps..."
+	$(SDK_INIT) cd transaction-producer && mvn clean package -DskipTests'
+	$(SDK_INIT) cd fraud-alert-streams && mvn clean package -DskipTests'
+	@echo "==> Building Rust apps..."
+	cargo build --manifest-path fraud-detector/Cargo.toml
+	cargo build --manifest-path notification-service/Cargo.toml
+
+run-producer:
+	$(SDK_INIT) cd transaction-producer && mvn spring-boot:run'
+
+run-fraud:
+	cargo run --manifest-path fraud-detector/Cargo.toml
+
+run-streams:
+	$(SDK_INIT) cd fraud-alert-streams && mvn spring-boot:run'
+
+run-notif:
+	cargo run --manifest-path notification-service/Cargo.toml
+
+test-1000:
+	./scripts/trigger-producer.sh 1000
+
+clean:
+	$(SDK_INIT) cd transaction-producer && mvn clean'
+	$(SDK_INIT) cd fraud-alert-streams && mvn clean'
+	cargo clean --manifest-path fraud-detector/Cargo.toml
+	cargo clean --manifest-path notification-service/Cargo.toml

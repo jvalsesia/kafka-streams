@@ -1,0 +1,21 @@
+# Build artifacts
+**/target/
+target/
+*.jar
+*.war
+
+# Rust
+Cargo.lock
+**/Cargo.lock
+**/*.rs.bk
+
+# IDE and OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
+graft/
+
+# Kafka data
+/tmp/kraft-combined-logs/

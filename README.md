@@ -8,7 +8,10 @@ This repository contains an end-to-end distributed event streaming system built 
 
 ```mermaid
 flowchart LR
-    P1["1. transaction-producer<br/>(Spring Boot 3.3 / Java 21)"]
+    subgraph Producers["Producers"]
+        P1["1a. transaction-producer<br/>(Spring Boot 3.3 / Java 21)"]
+        P1_RUST["1b. transaction-producer-rust<br/>(Rust / rdkafka)"]
+    end
 
     subgraph Cluster["Kafka Cluster"]
         subgraph Broker["Kafka Broker (KRaft Node 1)"]
@@ -25,7 +28,8 @@ flowchart LR
     P3["3. fraud-alert-streams<br/>(Spring Boot / Kafka Streams)"]
     P4["4. notification-service<br/>(Rust / rdkafka)"]
 
-    P1 -->|"Produce 1,000 tx<br/>key: accountId"| T1
+    P1 -->|"Produce REST API<br/>key: accountId"| T1
+    P1_RUST -->|"Produce CLI Batch<br/>key: accountId"| T1
     T1 -->|"Consume tx"| P2
     P2 -->|"Amount > 3,000<br/>FraudDetectedEvent"| T2
     T2 -->|"Topology stream<br/>process & enrich"| P3
@@ -41,7 +45,8 @@ flowchart LR
 
 | # | Project | Language / Framework | Role | Input Topic | Output Topic |
 |---|---|---|---|---|---|
-| **1** | [`transaction-producer`](file:///home/jvalsesia/orca/workspaces/kafka-streams/skua/transaction-producer) | Java 21 / Spring Boot 3.3 / Spring Kafka | Produces 1,000 realistic transaction events on demand via REST endpoint or startup flag. Uses account-based partitioning. | — | `transactions` |
+| **1a** | [`transaction-producer`](file:///home/jvalsesia/orca/workspaces/kafka-streams/skua/transaction-producer) | Java 21 / Spring Boot 3.3 / Spring Kafka | Produces 1,000 realistic transaction events on demand via REST endpoint or startup flag. Uses account-based partitioning. | — | `transactions` |
+| **1b** | [`transaction-producer-rust`](file:///home/jvalsesia/orca/workspaces/kafka-streams/skua/transaction-producer-rust) | Rust 1.98 / Tokio / rdkafka / Clap | High-throughput native CLI transaction producer emitting configurable batches (`--count 1000`) or continuous streams with account keys. | — | `transactions` |
 | **2** | [`fraud-detector`](file:///home/jvalsesia/orca/workspaces/kafka-streams/skua/fraud-detector) | Rust 1.98 / Tokio / rdkafka / Serde | Consumes from `transactions`, identifies fraudulent transactions exceeding `$3,000.00`, and publishes structured fraud events. | `transactions` | `fraud-detected-transactions` |
 | **3** | [`fraud-alert-streams`](file:///home/jvalsesia/orca/workspaces/kafka-streams/skua/fraud-alert-streams) | Java 21 / Spring Boot 3.3 / Apache Kafka Streams | Real-time stream processing topology consuming fraud events, determining severity & mitigation actions, and publishing enriched alerts. | `fraud-detected-transactions` | `alerts` |
 | **4** | [`notification-service`](file:///home/jvalsesia/orca/workspaces/kafka-streams/skua/notification-service) | Rust 1.98 / Tokio / rdkafka / Serde | Consumes alerts, dispatches multi-channel notifications (SMS, Urgent Push, Email, Security Pagers) and records notifications. | `alerts` | `notifications` |
@@ -144,6 +149,7 @@ Or build each individually:
   ```
 - **Rust apps**:
   ```bash
+  cargo build --manifest-path transaction-producer-rust/Cargo.toml
   cargo build --manifest-path fraud-detector/Cargo.toml
   cargo build --manifest-path notification-service/Cargo.toml
   ```
@@ -170,7 +176,7 @@ java -jar target/fraud-alert-streams-1.0.0.jar
 ./fraud-detector/target/debug/fraud-detector
 ```
 
-**Terminal 4 — Spring Boot Transaction Producer:**
+**Terminal 4 — Spring Boot Transaction Producer (Optional REST runner):**
 ```bash
 cd transaction-producer
 java -jar target/transaction-producer-1.0.0.jar
@@ -180,13 +186,19 @@ java -jar target/transaction-producer-1.0.0.jar
 ---
 
 ### Step 4: Trigger the 1,000 Transactions Batch
-Once all 4 services are running, trigger the producer via REST API:
+You can produce transactions using **either** producer:
 
+**Option A — Via Rust CLI Producer (High-throughput native):**
+```bash
+cargo run --manifest-path transaction-producer-rust/Cargo.toml -- --count 1000
+# or with Makefile:
+make run-producer-rust
+```
+
+**Option B — Via Spring Boot REST API Producer:**
 ```bash
 curl -X POST "http://localhost:8081/api/transactions/trigger?count=1000"
-```
-Or using the provided script:
-```bash
+# or with script:
 ./scripts/trigger-producer.sh 1000
 ```
 

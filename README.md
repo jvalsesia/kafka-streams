@@ -8,16 +8,19 @@ This repository contains an end-to-end distributed event streaming system built 
 
 ```mermaid
 flowchart LR
+    P1["1. transaction-producer<br/>(Spring Boot 3.3 / Java 21)"]
+
     subgraph Cluster["Kafka Cluster"]
         subgraph Broker["Kafka Broker (KRaft Node 1)"]
+            direction TB
             T1[("Topic: transactions<br/>(3 Partitions)")]
             T2[("Topic: fraud-detected-transactions<br/>(3 Partitions)")]
             T3[("Topic: alerts<br/>(3 Partitions)")]
             T4[("Topic: notifications<br/>(3 Partitions)")]
+            T1 ~~~ T2 ~~~ T3 ~~~ T4
         end
     end
 
-    P1["1. transaction-producer<br/>(Spring Boot 3.3 / Java 21)"]
     P2["2. fraud-detector<br/>(Rust / rdkafka)"]
     P3["3. fraud-alert-streams<br/>(Spring Boot / Kafka Streams)"]
     P4["4. notification-service<br/>(Rust / rdkafka)"]
